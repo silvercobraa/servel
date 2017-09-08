@@ -10,10 +10,10 @@ info extracted from
 http://stackoverflow.com/questions/12360999/pypdf-retrieve-page-numbers-from-document 
 http://stackoverflow.com/questions/26494211/extracting-text-from-a-pdf-file-using-pdfminer-in-python
 '''
+
 import csv
 import sys
 import json
-import googlemaps
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
@@ -26,11 +26,12 @@ from pyPdf import PdfFileReader
 
 
 
+
 def convert(fname, pages=None):
-'''
-This function converts a pagre from a pdf file into a stream of text.
-Thanks to the libraries imported.
-'''
+    '''
+    This function converts a pagre from a pdf file into a stream of text.
+    Thanks to the libraries imported.
+    '''
     if not pages:
         pagenums = set()
     else:
@@ -74,7 +75,7 @@ def servelParser(rutaPdf):
         pages[i]    = convert(rutaPdf,[i]) 
         
         indexNombre = pages[i].index('NOMBRE')
-        indexRegion = pages[i].index('REGION')
+        indexRegion = pages[i].index('REGIÓN')
         indexComuna = pages[i].index('COMUNA:')
         indexCI     = pages[i].index('C.IDENTIDAD SEXO')
         indexCirc   = pages[i].index('CIRCUNSCRIPCIÓN')
@@ -89,7 +90,7 @@ def servelParser(rutaPdf):
             nombres[i]           = pages[i][indexNombre+1:indexCI-1]
             rut[i]               = pages[i][indexCI+2:indexCI+2+len(nombres[i])]
             comuna[i]            = pages[i][indexComuna+2]
-            circunscripcion[i]   = pages[i][indexCirc+1:indexCirc+1+2*len(nombres[1]):2]
+            circunscripcion[i]   = pages[i][indexCirc+1:indexCirc+1+2*len(nombres[i]):2]
             direccion[i]         = pages[i][indexDomEle+1:indexDomEle+1+2*len(nombres[i]):2]
             provincia[i]         = str(pages[i][indexRegion+4]).replace(":","").lstrip()
             Region[i]            = str(pages[i][indexRegion+3]).replace(":","").lstrip()
@@ -103,40 +104,43 @@ def servelParser(rutaPdf):
             provincia[i]         = str(pages[i][indexRegion+4]).replace(":","").lstrip()
             Region[i]            = str(pages[i][indexRegion+3]).replace(":","").lstrip()
             Mesa[i]              = pages[i][indexMesa+1:len(pages[i])-1]
-        
         votantes +=len(nombres[i])
         
     
-    
-
-    myKey = 'AIz...' #your google API key
-    
-    datosServel = [dict() for x in range(votantes)] #diccionario se mandará a MongoDB
+    #datosServel = [dict() for x in range(votantes)] #diccionario se mandará a MongoDB
     k=0
-    for i in range(paginas): 
-        for j in range(len(nombres[i])):
-            rutSexo = rut[i][j].split(" ") 
-            #GoogleMaps API query
-            #Will search the address that appears in the Servel Record, for EACH person
-            gmaps = googlemaps.Client(myKey)
-            queryAddr = direccion[i][j] + ", "  + comuna[i] + ", " + Region[i] + ", Chile"
-            # Geocoding an address
-            geocode_result = gmaps.geocode(queryAddr)
+
+    with open(rutaPdf[:-3] + 'csv', 'wb') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        for i in range(paginas): 
+            for j in range(len(nombres[i])):
+                rutSexo = rut[i][j].split(" ")
             
-            #datosServel will be a data structure, containing the information of each person.  Also, it
-            #will record the lat and long of its address, in order to show it in googleMap
-            print "Guardando datos número ",k+1
-            datosServel[k] = {  'Nombre':str(nombres[i][j]),
-                                'Rut':str(rutSexo[0].replace(".","")),
-                                'Circunscripcion':circunscripcion[i][j],
-                                'Mesa':Mesa[i][j],
-                                'Sexo':rutSexo[1][0].replace("V", "H"),
-                                'direccion':direccion[i][j],
-                                'Comuna':comuna[i],
-                                'Region':Region[i],
-                                'Lat':geocode_result[0]["geometry"]["location"]["lat"],
-                                'Lng':geocode_result[0]["geometry"]["location"]["lng"]}
-            k+=1
+                #datosServel will be a data structure, containing the information of each person.  Also, it
+                #will record the lat and long of its address, in order to show it in googleMap
+                print "Guardando datos número ",k+1
+                #datosServel[k] = {  'Nombre':str(nombres[i][j]),
+                #                    'Rut':str(rutSexo[0].replace(".","")),
+                #                    'Circunscripcion':circunscripcion[i][j],
+                #                    'Mesa':Mesa[i][j],
+                #                    'Sexo':rutSexo[1][0].replace("V", "H"),
+                #                    'direccion':direccion[i][j],
+                #                    'Comuna':comuna[i],
+                #                    'Region':Region[i]}
+                try:
+                    filacsv = [str(nombres[i][j]),
+                               str(rutSexo[0].replace(".","")),
+                               circunscripcion[i][j],
+                               Mesa[i][j],
+                               rutSexo[1][0].replace("V", "H"),
+                               direccion[i][j],
+                               comuna[i],
+                               Region[i]]
+                    spamwriter.writerow(filacsv)
+                except IndexError as ie:
+                    print ie
+                    print rutaPdf
+                k+=1
                                 
-    return datosServel
+#    return datosServel
     
